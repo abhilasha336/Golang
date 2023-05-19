@@ -1,4 +1,4 @@
-module github.com/avlashabhi336/golang/my-calc
+module my-calc
 
 go 1.20
 
