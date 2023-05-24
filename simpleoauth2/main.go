@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	"github.com/lib/pq"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -74,5 +78,74 @@ func handlerCallback(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusBadRequest)
 	}
 	fmt.Fprintf(w, string(content))
+
+	payload := string(content)
+
+	type MyData struct {
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+		Picture       string `json:"picture"`
+		Hd            string `json:"hd"`
+	}
+
+	// Parse the JSON string
+	var data MyData
+	err = json.Unmarshal([]byte(payload), &data)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return
+	}
+	// Connection parameters
+	host := "localhost"
+	port := 5432
+	user := "postgres"
+	dbname := "test_db"
+	sslMode := "disable"
+
+	// Construct the connection string
+	connStr := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
+		host, port, user, dbname, sslMode)
+
+	// Open a connection to the database
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		fmt.Println("Error connecting to the database:", err)
+		return
+	}
+	defer db.Close()
+
+	// Test the connection
+	err = db.Ping()
+	if err != nil {
+		fmt.Println("Error pinging the database:", err)
+		return
+	}
+
+	fmt.Println("Successfully connected to the PostgreSQL database!")
+	conn, err := pq.NewConnector(connStr)
+	if err != nil {
+		fmt.Println("connector error")
+	}
+
+	idBig, err := strconv.ParseInt(data.ID, 10, 64)
+	if err != nil {
+		fmt.Println("autherrconv", err)
+	}
+	email := data.Email
+	name := strings.SplitAfter(email, "@")
+	exactname := name[0]
+
+	dbc := sql.OpenDB(conn)
+	insertQuery := `INSERT INTO users (email, oauth_id, name) VALUES ($1,$2,$3)`
+
+	_, err = dbc.Exec(insertQuery, data.Email, idBig, exactname)
+	if err != nil {
+		fmt.Println("db insert error", err)
+		fmt.Fprintf(w, "User not registered")
+
+	}
+
+	fmt.Fprintf(w, "User registerd successfully")
 
 }
