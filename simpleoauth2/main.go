@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/lib/pq"
 
+	"github.com/golang-migrate/migrate/v4"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -27,11 +29,27 @@ var oauthConfig = &oauth2.Config{
 var strCsrf = "abhilash"
 
 func main() {
+	up := flag.Bool("up", false, "to up migration")
+	// down := flag.Bool("down", false, "to down migration")
+	// runserver := flag.Bool("runserver", false, "to run server")
+	flag.Parse()
+
+	dbURL := "postgres://postgres:localhost:5432/test_db?sslmode=disable"
+
+	m, err := migrate.New("./migrations", dbURL)
+	if err != nil {
+		fmt.Println("Error creating migrate instance:", err)
+		return
+	}
+	if *up {
+		m.Up()
+		fmt.Println("successfuul up")
+	}
 
 	http.HandleFunc("/", handlerHome)
 	http.HandleFunc("/login", handlerLogin)
 	http.HandleFunc("/google/callback", handlerCallback)
-	err := http.ListenAndServe(":3000", nil)
+	err = http.ListenAndServe(":3000", nil)
 	if err != nil {
 		fmt.Println("error running server")
 		panic(err)
