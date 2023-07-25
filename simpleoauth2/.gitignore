@@ -1,1 +1,19 @@
 client_secret_859339718701-pvvlufnvtjq6b6rorc9h8q1ll3cjo2gp.apps.googleusercontent.com (1).json
+
+My
+export GOOGLE_REDIRECT_URL="http://localhost:3000/google/callback"
+export GOOGLE_CLIENT_ID="859339718701-pvvlufnvtjq6b6rorc9h8q1ll3cjo2gp.apps.googleusercontent.com"
+export GOOGLE_CLIENT_SECRET="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"
+
+MY
+export FACEBOOK_REDIRECT_URL="http://localhost:3000/facebook/callback"
+export FACEBOOK_CLIENT_ID="643531040832444"
+export FACEBOOK_CLIENT_SECRET="60f3613b5b405a2fda4db1dd29cd7de7"
+
+//sukanya
+export FACEBOOK_REDIRECT_URL="http://localhost:3000/callback"
+export FACEBOOK_CLIENT_ID="658742689394883"
+export FACEBOOK_CLIENT_SECRET="85a44a138dd189c4e4ca1299a78fba20" 
+
+
+

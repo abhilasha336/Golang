@@ -2,168 +2,202 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
-	"strconv"
-	"strings"
+	"os"
+	"time"
 
-	"github.com/lib/pq"
-
-	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	facebookOAuth "golang.org/x/oauth2/facebook"
+	googleOAuth "golang.org/x/oauth2/google"
 )
 
-var oauthConfig = &oauth2.Config{
-	RedirectURL:  "http://localhost:3000/google/callback",
-	ClientID:     "859339718701-pvvlufnvtjq6b6rorc9h8q1ll3cjo2gp.apps.googleusercontent.com",
-	ClientSecret: "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",
-	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
-	Endpoint:     google.Endpoint,
+var strCsrf = "abhilash"
+var jwtKey = []byte("jwykey")
+
+var (
+	facebookClientID     = os.Getenv("FACEBOOK_CLIENT_ID")
+	facebookClientSecret = os.Getenv("FACEBOOK_CLIENT_SECRET")
+	facebookRedirectURL  = os.Getenv("FACEBOOK_REDIRECT_URL")
+
+	googleClientID     = os.Getenv("GOOGLE_CLIENT_ID")
+	googleClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
+	googleRedirectURL  = os.Getenv("GOOGLE_REDIRECT_URL")
+)
+
+type MyData struct {
+	ID            string `json:"id"`
+	Email         string `json:"email"`
+	VerifiedEmail bool   `json:"verified_email"`
+	Picture       string `json:"picture"`
+	Hd            string `json:"hd"`
 }
 
-var strCsrf = "abhilash"
-
 func main() {
-	up := flag.Bool("up", false, "to up migration")
-	// down := flag.Bool("down", false, "to down migration")
-	// runserver := flag.Bool("runserver", false, "to run server")
-	flag.Parse()
-
-	dbURL := "postgres://postgres:localhost:5432/test_db?sslmode=disable"
-
-	m, err := migrate.New("./migrations", dbURL)
-	if err != nil {
-		fmt.Println("Error creating migrate instance:", err)
-		return
-	}
-	if *up {
-		m.Up()
-		fmt.Println("successfuul up")
-	}
-
 	http.HandleFunc("/", handlerHome)
-	http.HandleFunc("/login", handlerLogin)
-	http.HandleFunc("/google/callback", handlerCallback)
-	err = http.ListenAndServe(":3000", nil)
+	http.HandleFunc("/login/facebook", handlerFacebookLogin)
+	http.HandleFunc("/login/google", handlerGoogleLogin)
+	http.HandleFunc("/callback", handlerFacebookCallback)
+	http.HandleFunc("/google/callback", handlerGoogleCallback)
+
+	err := http.ListenAndServe(":3000", nil)
 	if err != nil {
 		fmt.Println("error running server")
+		log.Println("listen and serve error")
 		panic(err)
-
 	}
-	fmt.Println("server starting")
+	log.Print("server started on port:3000")
+
 }
 
 func handlerHome(w http.ResponseWriter, r *http.Request) {
 	var html = `<html>
 			<body>
-				<a href="login">Google Sign in</a>
+				<a href="/login/facebook">Facebook Sign in</a>
+				<br>
+				<a href="/login/google">Google Sign in</a>
 			</body>
 		</html>`
 	fmt.Fprint(w, html)
 }
 
-func handlerLogin(w http.ResponseWriter, r *http.Request) {
-	url := oauthConfig.AuthCodeURL(strCsrf)
-	fmt.Println("url is", url)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+func handlerFacebookLogin(w http.ResponseWriter, r *http.Request) {
+	url := facebookOAuthConfig.AuthCodeURL(strCsrf, oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func handlerCallback(w http.ResponseWriter, r *http.Request) {
+func handlerGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	url := googleOAuthConfig.AuthCodeURL(strCsrf, oauth2.AccessTypeOffline)
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+var facebookOAuthConfig = &oauth2.Config{
+	ClientID:     facebookClientID,
+	ClientSecret: facebookClientSecret,
+	RedirectURL:  facebookRedirectURL,
+	Endpoint:     facebookOAuth.Endpoint,
+	Scopes:       []string{"email", "public_profile"},
+}
+
+var googleOAuthConfig = &oauth2.Config{
+	ClientID:     googleClientID,
+	ClientSecret: googleClientSecret,
+	RedirectURL:  googleRedirectURL,
+	Endpoint:     googleOAuth.Endpoint,
+	Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
+}
+
+func handlerFacebookCallback(w http.ResponseWriter, r *http.Request) {
+	log.Println("hitted  fb server")
 	if r.FormValue("state") != strCsrf {
 		fmt.Println("state is not valid")
 		http.Redirect(w, r, "/", http.StatusBadRequest)
 	}
-	token, err := oauthConfig.Exchange(context.Background(), r.FormValue("code"))
+	token, err := facebookOAuthConfig.Exchange(context.Background(), r.FormValue("code"))
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 		http.Redirect(w, r, "/", http.StatusBadRequest)
-
+		return
 	}
-	res, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	facebookUserDetailsRequest, err := http.NewRequest("GET", "https://graph.facebook.com/me?fields=id,name,email&access_token="+token.AccessToken, nil)
+	if err != nil {
+		fmt.Println("hifiiii")
+	}
+	resp, err := http.DefaultClient.Do(facebookUserDetailsRequest)
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 		http.Redirect(w, r, "/", http.StatusBadRequest)
+		return
 	}
-	defer res.Body.Close()
-	content, err := io.ReadAll(res.Body)
+	defer resp.Body.Close()
+	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 		http.Redirect(w, r, "/", http.StatusBadRequest)
+		return
 	}
-	fmt.Fprintf(w, string(content))
+	fmt.Fprint(w, string(content))
 
-	payload := string(content)
-
-	type MyData struct {
-		ID            string `json:"id"`
-		Email         string `json:"email"`
-		VerifiedEmail bool   `json:"verified_email"`
-		Picture       string `json:"picture"`
-		Hd            string `json:"hd"`
-	}
-
-	// Parse the JSON string
 	var data MyData
-	err = json.Unmarshal([]byte(payload), &data)
+	err = json.Unmarshal([]byte(content), &data)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
 		return
 	}
-	// Connection parameters
-	host := "localhost"
-	port := 5432
-	user := "postgres"
-	dbname := "test_db"
-	sslMode := "disable"
 
-	// Construct the connection string
-	connStr := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
-		host, port, user, dbname, sslMode)
+	//2nd functionalities
+	tokenString := GenerateJwtToken(data, 1)
+	fmt.Fprint(w, tokenString)
+}
 
-	// Open a connection to the database
-	db, err := sql.Open("postgres", connStr)
+func handlerGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	log.Println("hitted  google server")
+	if r.FormValue("state") != strCsrf {
+		fmt.Println("state is not valid")
+		http.Redirect(w, r, "/", http.StatusBadRequest)
+	}
+	token, err := googleOAuthConfig.Exchange(context.Background(), r.FormValue("code"))
 	if err != nil {
-		fmt.Println("Error connecting to the database:", err)
+		fmt.Fprintln(w, err.Error())
+		http.Redirect(w, r, "/", http.StatusBadRequest)
 		return
 	}
-	defer db.Close()
-
-	// Test the connection
-	err = db.Ping()
+	googleUserDetailsRequest, err := http.NewRequest("GET", "https://www.googleapis.com/oauth2/v3/userinfo?access_token="+token.AccessToken, nil)
 	if err != nil {
-		fmt.Println("Error pinging the database:", err)
+		fmt.Println("hifiiii")
+	}
+	resp, err := http.DefaultClient.Do(googleUserDetailsRequest)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		http.Redirect(w, r, "/", http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		http.Redirect(w, r, "/", http.StatusBadRequest)
+		return
+	}
+	fmt.Fprint(w, string(content))
+
+	var data MyData
+	err = json.Unmarshal([]byte(content), &data)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
 		return
 	}
 
-	fmt.Println("Successfully connected to the PostgreSQL database!")
-	conn, err := pq.NewConnector(connStr)
-	if err != nil {
-		fmt.Println("connector error")
+	//2nd functionalities
+	tokenString := GenerateJwtToken(data, 1)
+	fmt.Fprint(w, tokenString)
+}
+
+// generated a new JWT token from the userid with given expiry time
+func GenerateJwtToken(data MyData, expTime int) string {
+	expirationTime := time.Now().Add(time.Duration(expTime) * time.Minute)
+	newClaims := &Claims{
+		UserId: data.ID,
+		Email:  data.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
 	}
-
-	idBig, err := strconv.ParseInt(data.ID, 10, 64)
+	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
+	token, err := jwtToken.SignedString(jwtKey)
 	if err != nil {
-		fmt.Println("autherrconv", err)
+		fmt.Println(err)
+		return err.Error()
 	}
-	email := data.Email
-	name := strings.SplitAfter(email, "@")
-	exactname := name[0]
+	return token
+}
 
-	dbc := sql.OpenDB(conn)
-	insertQuery := `INSERT INTO users (email, oauth_id, name) VALUES ($1,$2,$3)`
-
-	_, err = dbc.Exec(insertQuery, data.Email, idBig, exactname)
-	if err != nil {
-		fmt.Println("db insert error", err)
-		fmt.Fprintf(w, "User not registered")
-
-	}
-
-	fmt.Fprintf(w, "User registerd successfully")
-
+type Claims struct {
+	UserId               string // Change the data type of UserId to match your actual data type
+	Email                string
+	jwt.RegisteredClaims // Embedded to include the standard JWT claims
 }
