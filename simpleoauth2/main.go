@@ -247,6 +247,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/", handlerHome)
+	r.GET("/oauth", oauth)
 	r.GET("/login/facebook", handlerFacebookLogin)
 	r.GET("/login/google", handlerGoogleLogin)
 	r.GET("/callback", handlerFacebookCallback)
@@ -254,6 +255,20 @@ func main() {
 
 	if err := r.Run(":3000"); err != nil {
 		log.Println("Error running server:", err)
+	}
+}
+
+func oauth(c *gin.Context) {
+	oauthType := c.DefaultQuery("type", "")
+	switch oauthType {
+	case "google":
+		url := googleOAuthConfig.AuthCodeURL(strCsrf, oauth2.AccessTypeOffline)
+		c.Redirect(http.StatusFound, url)
+	case "facebook":
+		url := facebookOAuthConfig.AuthCodeURL(strCsrf, oauth2.AccessTypeOffline)
+		c.Redirect(http.StatusFound, url)
+	default:
+		c.String(http.StatusBadRequest, "Invalid OAuth type")
 	}
 }
 

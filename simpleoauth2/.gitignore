@@ -15,10 +15,7 @@ export FACEBOOK_REDIRECT_URL="http://localhost:3000/callback"
 export FACEBOOK_CLIENT_ID="658742689394883"
 export FACEBOOK_CLIENT_SECRET="85a44a138dd189c4e4ca1299a78fba20" 
 
-//my businussm test
-export FACEBOOK_REDIRECT_URL="http://localhost:3000/callback"
-export FACEBOOK_CLIENT_ID="241868082100140"
-export FACEBOOK_CLIENT_SECRET="33f477ab34d17fc328c0309c3f9c7a94"
+
 
 
 
