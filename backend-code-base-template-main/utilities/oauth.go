@@ -31,15 +31,26 @@ type Claims struct {
 }
 
 func GenerateJwtToken(data MyData, expTime int) string {
+	var newClaims *Claims
 	expirationTime := time.Now().Add(time.Duration(expTime) * time.Minute)
-
-	newClaims := &Claims{
-		UserId: data.ID,
-		Email:  data.Email,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-		},
+	if data.ID == "" {
+		newClaims = &Claims{
+			UserId: data.Id,
+			Email:  data.Email,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(expirationTime),
+			},
+		}
+	} else {
+		newClaims = &Claims{
+			UserId: data.ID,
+			Email:  data.Email,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(expirationTime),
+			},
+		}
 	}
+
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
 	token, err := jwtToken.SignedString(jwtKey)
 	if err != nil {
