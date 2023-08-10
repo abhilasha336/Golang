@@ -5,6 +5,7 @@ import (
 	"backend-code-base-template/utilities"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -68,14 +69,36 @@ func (oauth *OauthSpotifyController) InitRoutes() {
 			return
 		}
 
-		var user utilities.MyData
-		if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Error decoding user details: %v", err))
+		// var user utilities.MyData
+		// if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		// 	c.String(http.StatusInternalServerError, fmt.Sprintf("Error decoding user details: %v", err))
+		// 	return
+		// }
+		// fmt.Printf("%+v", user)
+
+		content, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Fprintln(c.Writer, err.Error())
+			c.Redirect(http.StatusBadRequest, "/")
 			return
 		}
-		tokenString := utilities.GenerateJwtToken(user, 1)
-		fmt.Fprint(c.Writer, user)
+		fmt.Fprint(c.Writer, string(content))
+
+		var data utilities.MyData
+		err = json.Unmarshal([]byte(content), &data)
+		if err != nil {
+			fmt.Println("Error parsing JSON:", err)
+			return
+		}
+		fmt.Printf("%+v", data)
+
+		tokenString := utilities.GenerateJwtToken(data, 1)
+		fmt.Fprint(c.Writer, data)
 		fmt.Fprint(c.Writer, tokenString)
+
+		res := utilities.ValidateJwtToken(tokenString)
+		fmt.Fprintf(c.Writer, "%+v", res)
+
 	})
 
 }

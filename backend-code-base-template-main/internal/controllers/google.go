@@ -93,11 +93,15 @@ func (oauth *OauthGoogleController) InitRoutes() {
 			fmt.Println("Error parsing JSON:", err)
 			return
 		}
+		fmt.Printf("%+v", data)
 
 		// 2nd functionalities
 		tokenString := utilities.GenerateJwtToken(data, 1)
 
 		fmt.Fprint(c.Writer, tokenString)
+		res := utilities.ValidateJwtToken(tokenString)
+		fmt.Fprintf(c.Writer, "%+v", res)
+
 	})
 	oauth.router.GET("/", func(ctx *gin.Context) {
 		// version.RenderHandler(ctx, oauth, "HandlerHome")
@@ -111,6 +115,7 @@ func (oauth *OauthGoogleController) InitRoutes() {
 
 			</body>
 		</html>`
+
 		ctx.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 	})
 }

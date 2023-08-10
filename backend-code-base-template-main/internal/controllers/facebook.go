@@ -92,9 +92,12 @@ func (oauth *OauthFacebookController) InitRoutes() {
 			fmt.Println("Error parsing JSON:", err)
 			return
 		}
-
+		fmt.Printf("%+v", data)
 		tokenString := utilities.GenerateJwtToken(data, 1)
 		fmt.Fprint(c.Writer, tokenString)
+
+		res := utilities.ValidateJwtToken(tokenString)
+		fmt.Fprintf(c.Writer, "%+v", res)
 	})
 	// 	oauth.router.GET("/", func(ctx *gin.Context) {
 	// 		// version.RenderHandler(ctx, oauth, "HandlerHome")

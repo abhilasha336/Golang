@@ -81,11 +81,13 @@ func Run() {
 		oauthGoogleControllers := controllers.NewOauthGoogleController(api, oauthGoogleUseCases)
 		oauthFacebookControllers := controllers.NewOauthFacebookController(api, oauthFacebookUseCases)
 		oauthSpotifyControllers := controllers.NewOauthSpotifyController(api, oauthSpotifyUseCases)
+		tokenClaimController := controllers.NewTokenClaimsController(api)
 
 		// init the routes
 		oauthGoogleControllers.InitRoutes()
 		oauthFacebookControllers.InitRoutes()
 		oauthSpotifyControllers.InitRoutes()
+		tokenClaimController.InitRoutes()
 
 	}
 
