@@ -68,25 +68,25 @@ func Run() {
 
 		// repo initialization
 		oauthGoogleRepo := repo.NewOauthGoogleRepo(pgsqlDB)
-		oauthFacebookRepo := repo.NewOauthFacebookRepo(pgsqlDB)
-		oauthSpotifyRepo := repo.NewOauthSpotifyRepo(pgsqlDB)
+		// oauthFacebookRepo := repo.NewOauthFacebookRepo(pgsqlDB)
+		// oauthSpotifyRepo := repo.NewOauthSpotifyRepo(pgsqlDB)
 
 		// initilizing usecases
 
 		oauthGoogleUseCases := usecases.NewOauthGoogleUseCase(oauthGoogleRepo)
-		oauthFacebookUseCases := usecases.NewOauthFacebookUseCase(oauthFacebookRepo)
-		oauthSpotifyUseCases := usecases.NewOauthSpotifyUseCase(oauthSpotifyRepo)
+		// oauthFacebookUseCases := usecases.NewOauthFacebookUseCase(oauthFacebookRepo)
+		// oauthSpotifyUseCases := usecases.NewOauthSpotifyUseCase(oauthSpotifyRepo)
 
 		// initalizin controllers
 		oauthGoogleControllers := controllers.NewOauthGoogleController(api, oauthGoogleUseCases)
-		oauthFacebookControllers := controllers.NewOauthFacebookController(api, oauthFacebookUseCases)
-		oauthSpotifyControllers := controllers.NewOauthSpotifyController(api, oauthSpotifyUseCases)
+		// oauthFacebookControllers := controllers.NewOauthFacebookController(api, oauthFacebookUseCases)
+		// oauthSpotifyControllers := controllers.NewOauthSpotifyController(api, oauthSpotifyUseCases)
 		tokenClaimController := controllers.NewTokenClaimsController(api)
 
 		// init the routes
 		oauthGoogleControllers.InitRoutes()
-		oauthFacebookControllers.InitRoutes()
-		oauthSpotifyControllers.InitRoutes()
+		// oauthFacebookControllers.InitRoutes()
+		// oauthSpotifyControllers.InitRoutes()
 		tokenClaimController.InitRoutes()
 
 	}
