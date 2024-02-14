@@ -1,0 +1,124 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+  dependancy:
+    working_directory: ~/repo
+    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+    docker:
+      - image: golang:latest
+    # Add steps to the job
+    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run:
+          name: Install Dependencies
+          command: go mod download
+  format:
+    docker:
+      - image: golang:latest
+    steps:
+      - checkout
+      - run:
+          name: Format
+          command: |
+            go fmt $(go list ./... | grep -v /vendor/)
+            go vet $(go list ./... | grep -v /vendor/)
+  
+  golancilint:
+    docker:
+      - image: golangci/golangci-lint:latest-alpine
+    steps:
+      - checkout
+      - run:
+          name: "Create a temp directory for artifacts"
+          command: |
+            mkdir -p /tmp/artifacts
+      - run:
+          name: Lint
+          command: | 
+            golangci-lint run --issues-exit-code 0 --print-issued-lines=false --out-format code-climate:gl-code-quality-report.json,line-number --timeout 3m -v
+            mv gl-code-quality-report.json /tmp/artifacts
+  #   
+  # Check the coverage tests
+  # 
+  coverage-test:
+    docker:
+      - image: golang:latest
+    steps:
+      - checkout
+      - run: go build
+      - run:
+          name: "Create a temp directory for artifacts"
+          command: |
+            mkdir -p /tmp/artifacts
+            
+      - run:
+          name: calculate coverage
+          command: |
+            go test -coverprofile=coverage.out ./...
+            go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}'
+            go tool cover -html=coverage.out -o coverage.html
+            mv coverage.html /tmp/artifacts
+      
+      - persist_to_workspace:
+          root: .
+          paths:
+            - coverage.out
+            
+      - run:
+          name: Check coverage percentage
+          command: |
+            coverage=$(go tool cover -func=coverage.out | grep total | awk '{print int($3)}')
+            if [ "$coverage" -lt 70 ]; then
+              echo "Coverage is less than 70%: $coverage%"
+            else
+              echo "Coverage is acceptable: $coverage%"
+            fi
+      - store_artifacts:
+          path: /tmp/artifacts
+
+  # 
+  # Run the build
+  # 
+  build:
+    docker:
+      - image: golang:latest
+    environment:
+      MEMBER_DEBUG: "true"
+    steps:
+      - checkout
+      - run:
+          name: Build
+          command: |
+            mkdir -p binaries
+            go build -o app .
+      - persist_to_workspace:
+          root: .
+          paths:
+            - binaries
+
+      
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  build_and_test:
+    jobs:
+      - dependancy
+      - format
+      - golancilint
+      - coverage-test
+      - build:
+          requires:
+            - dependancy
+            - format
+            - golancilint
+            - coverage-test
+

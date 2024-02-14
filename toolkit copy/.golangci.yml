@@ -1,0 +1,66 @@
+linters:
+  # See the dedicated "linters" documentation section.
+  enable:
+    - errcheck
+    - gosimple
+    - gofmt
+    - govet
+    - revive
+    - ineffassign
+    - staticcheck
+    - unused
+
+linters-settings:
+  revive:
+    ignore-generated-header: true
+    severity: error
+    rules:
+       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#add-constant
+      - name: add-constant
+        severity: warning
+        disabled: false
+        arguments:
+          - maxLitCount: "4"
+            allowStrs: '""'
+            allowInts: "0,1,2"
+            allowFloats: "0.0,0.,1.0,1.,2.0,2."
+
+      - name: unhandled-error
+        arguments : ["fmt.Printf", "myFunction"]
+
+      - name: confusing-naming
+        severity: warning
+        disabled: false
+     
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#var-naming
+      - name: var-naming
+        severity: warning
+        disabled: false
+        arguments:
+          - ["ID"] # AllowList
+          - ["VM"] # DenyList
+          - - upperCaseConst: true
+
+      - name: struct-tag
+        arguments:
+          - "json,inline"
+          - "bson,outline,gnu"
+        severity: warning
+        disabled: false
+
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#useless-break
+      - name: useless-break
+        severity: warning
+        disabled: false
+      
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unreachable-code
+      - name: unreachable-code
+        severity: warning
+        disabled: false
+      
+      # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#unnecessary-stmt
+      - name: unnecessary-stmt
+        severity: warning
+        disabled: false
+
+go: '1.21'
