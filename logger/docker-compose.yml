@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    image: tune-verse/logger
+    container_name: tuneverse-logger-container
+    environment:
+      LOGGER_DEBUG: "true"
+      LOGGER_PORT: 8080
+      LOGGER_DB_DRIVER: "mongodb+srv"
+      LOGGER_DB_PORT: 27017
+      LOGGER_DB_USER: admin
+      LOGGER_DB_PASSWORD: wJesNZdK0LksXgLS
+      LOGGER_DB_HOST: cluster0.uynvlqu.mongodb.net
+      LOGGER_DB_DATABASE: logger_db
+      LOGGER_ACCEPTED_VERSIONS: v1.0
+    ports:
+      - 8080:8080
