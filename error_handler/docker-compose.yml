@@ -1,0 +1,73 @@
+version: '3.7'
+services:
+  localization_mongo:
+    env_file:
+      - .env
+    image : mongo
+    container_name: localization-mongo-container
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${LOCALIZATION_DB_USER:-}
+      MONGO_INITDB_ROOT_PASSWORD: ${LOCALIZATION_DB_PASSWORD:-}
+    volumes:
+      - mongodbdata:/data/db
+    # command: [--auth]
+    # ports:
+    #   - 27018:27017
+    restart: always
+    networks:
+      - mongo_network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.runCommand({ping:1})"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  localization_mongo_express:
+    env_file:
+      - .env
+    image: mongo-express
+    container_name: localization-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_SERVER: localization_mongo
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${LOCALIZATION_DB_USER:-}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${LOCALIZATION_DB_PASSWORD:-}
+      ME_CONFIG_BASICAUTH_USERNAME: ${LOCALIZATION_DB_USER:-}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${LOCALIZATION_DB_PASSWORD:-}
+    ports:
+      - 8082:8081
+    depends_on :
+      localization_mongo: 
+        condition: service_healthy
+    networks:
+      - mongo_network
+    restart: always
+
+  app:
+    env_file:
+      - .env
+    build: .
+    image: TuneVerse/localization
+    container_name: localization-app-container
+    environment:
+      LOCALIZATION_DEBUG: ${LOCALIZATION_DEBUG}
+      LOCALIZATION_PORT: 8080
+      LOCALIZATION_DB_PORT: 27017
+      LOCALIZATION_DB_USER: ${LOCALIZATION_DB_USER}
+      LOCALIZATION_DB_PASSWORD: ${LOCALIZATION_DB_PASSWORD}
+      LOCALIZATION_DB_HOST: localization_mongo
+      LOCALIZATION_DB_DATABASE: ${LOCALIZATION_DB_DATABASE}
+      LOCALIZATION_ACCEPTED_VERSIONS: ${LOCALIZATION_ACCEPTED_VERSIONS}
+    ports:
+      - 8080:8080
+    networks:
+      - mongo_network
+    depends_on :
+      localization_mongo: 
+        condition: service_healthy
+
+volumes:
+   mongodbdata:
+
+networks:
+  mongo_network:
+    driver: bridge
