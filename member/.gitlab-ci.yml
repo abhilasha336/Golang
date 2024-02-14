@@ -1,0 +1,38 @@
+image: golang:1.21
+
+
+stages:
+  - build
+  - test
+
+variables:
+  MINIMUM_COVERAGE: 65  # Set your desired minimum coverage here
+
+build:
+  stage: build
+  script:
+    - echo "Building your Go application..."
+    - go get -v        # Fetch project dependencies
+    - go build -o myapp 
+
+test:
+  stage: test
+  script:
+    - echo "Running tests..."
+    - go test -v ./...  # Replace with the appropriate command to run your tests
+
+# Define a custom job to check the test coverage in the 'usecases' package
+check_usecase_coverage:
+  stage: test
+  script:
+    - echo "Checking test coverage in the 'usecases' package..."
+    - go test -coverprofile=usecase_coverage.txt ./internal/usecases
+    - coverage=$(go tool cover -func=usecase_coverage.txt | grep total | awk '{print $3}' | cut -d. -f1)
+    - echo "Test coverage in 'usecases' package is $coverage%"
+    - |
+      if [ "$coverage" -ge "$MINIMUM_COVERAGE" ]; then
+        echo "Test coverage in 'usecases' package meets the minimum requirement ($MINIMUM_COVERAGE%).";
+      else
+        echo "Test coverage in 'usecases' package is below the minimum requirement ($MINIMUM_COVERAGE%).";
+        exit 1;
+      fi

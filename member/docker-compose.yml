@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  member:
+    build: .
+    image: tuneverse/member
+    container_name: tuneverse-member-container
+    environment:
+      MEMBER_DEBUG: "true"
+      MEMBER_DB_USER: "postgres"
+      MEMBER_DB_PORT: "5433"
+      MEMBER_DB_PASSWORD: "tuneverse"
+      MEMBER_DB_DATABASE: "tuneverse_local"
+      MEMBER_ACCEPTED_VERSIONS: "v1_0"
+      MEMBER_DB_SCHEMA: "public"
+      MEMBER_DB_HOST: "10.1.0.229"
+      MEMBER_CACHE_EXPIRATION: "1"
+      MEMBER_DB_SSLMODE: "disable"
+      MEMBER_LOCALISATION_SERVICE_URL: "http://localhost:8010/api/v1"
+      MEMBER_ENDPOINT_URL: "http://localhost:8010/api/v1"
+    ports:
+      - 8080:8080
